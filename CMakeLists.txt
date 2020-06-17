@@ -24,19 +24,33 @@ else ()
 endif ()
 
 catkin_package(
-#  INCLUDE_DIRS include
+ INCLUDE_DIRS include
  LIBRARIES nn_adaptive_controller
  CATKIN_DEPENDS geometry_msgs nav_msgs roscpp sensor_msgs std_msgs tf tf2
  DEPENDS
 )
 
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
+#############
+# LIBRARIES #
+#############
+
 add_library(nn_adaptive_controller
-    src/control_network/architecuture.cpp)
+    src/controller_network/architecture.cpp)
 
 target_link_libraries(nn_adaptive_controller ${catkin_LIBRARIES} ${TORCH_LIBRARIES})
 set_property(TARGET nn_adaptive_controller PROPERTY CXX_STANDARD 14)
+
+#########
+# TESTS #
+#########
+
+catkin_add_gtest(test_architecture 
+  test/test_architecture.cpp
+)
+target_link_libraries(test_architecture nn_adaptive_controller ${catkin_LIBRARIES} ${TORCH_LIBRARIES})
+set_property(TARGET test_architecture PROPERTY CXX_STANDARD 14)

@@ -10,7 +10,7 @@ public:
     ArchitectureImpl(const ArchitectureImpl &) = delete;
     ArchitectureImpl &operator=(const ArchitectureImpl &) = delete;
 
-    torch::Tensor forward(torch::Tensor x);
+    torch::Tensor forward(torch::Tensor x1, torch::Tensor x2);
 
 private:
     torch::nn::Linear dense1_;
