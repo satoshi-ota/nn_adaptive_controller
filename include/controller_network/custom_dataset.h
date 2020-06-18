@@ -3,6 +3,10 @@
 #include <torch/torch.h>
 #include <vector>
 #include <fstream>
+#include <string>
+#include <sstream>
+
+#include <controller_network/dataset_reader.h>
 
 class CustomDataset : public torch::data::Dataset<CustomDataset>
 {
