@@ -41,7 +41,7 @@ CustomDataset::CustomDataset(std::vector<std::ifstream> &ifss)
     {
         //   std::tie(input, output) = reader.load_one_image(i);
         inputs_.emplace_back(torch::ones({1, 1, 24}));
-        outputs_.emplace_back(torch::ones({6, 1}));
+        outputs_.emplace_back(torch::ones({1, 6}));
     }
     // }
 };

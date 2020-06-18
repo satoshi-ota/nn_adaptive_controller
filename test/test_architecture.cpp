@@ -22,7 +22,7 @@ TEST(ArchitectureImpl, forward)
 
         auto y = architecture->forward(x);
 
-        ASSERT_EQ((std::vector<int64_t>{out_features, batch_size}), y.sizes());
+        ASSERT_EQ((std::vector<int64_t>{batch_size, out_features}), y.sizes());
 }
 
 TEST(CustomDateset, forward)
@@ -52,8 +52,66 @@ TEST(CustomDateset, forward)
                         ASSERT_EQ(1, batch.data[i].size(1));
                         ASSERT_EQ(24, batch.data[i].size(2));
 
-                        ASSERT_EQ(batch.target.sizes(), (std::vector<std::int64_t>{32, 6, 1}));
+                        ASSERT_EQ(batch.target.sizes(), (std::vector<std::int64_t>{32, 1, 6}));
                 }
+        }
+}
+
+TEST(Training, forward)
+{
+        constexpr double LEARNING_RATE{0.0005};
+
+        EXPECT_TRUE(torch::cuda::is_available());
+        torch::DeviceType device_type{};
+        if (torch::cuda::is_available())
+        {
+                std::cout << "CUDA available! Training on GPU." << std::endl;
+                device_type = torch::kCUDA;
+        }
+        else
+        {
+                std::cout << "Training on CPU." << std::endl;
+                device_type = torch::kCPU;
+        }
+        torch::Device device{device_type};
+
+        Architecture model(100, 100);
+        model->to(device);
+
+        torch::optim::Adam optimizer{
+            model->parameters(),
+            torch::optim::AdamOptions(LEARNING_RATE)};
+
+        torch::manual_seed(1);
+        std::vector<std::ifstream> ifss{};
+
+        auto ds = CustomDataset{ifss}.map(torch::data::transforms::Stack<>());
+
+        constexpr int BATCH_SIZE = 32;
+
+        auto data_loader = torch::data::make_data_loader(
+            std::move(ds),
+            torch::data::DataLoaderOptions().batch_size(BATCH_SIZE).workers(2).drop_last(true));
+
+        for (auto &batch : *data_loader)
+        {
+                auto batch_size = batch.data.size(0);
+                ASSERT_EQ(batch.data.sizes(), (std::vector<std::int64_t>{32, 1, 1, 24}));
+                ASSERT_EQ(BATCH_SIZE, batch_size);
+
+                auto data = batch.data.to(device);
+                auto targets = batch.target.to(device);
+                optimizer.zero_grad();
+
+                auto output = model->forward(data);
+
+                auto loss = torch::mse_loss(output, targets);
+                float loss_val = loss.item<float>();
+
+                loss.backward();
+                optimizer.step();
+
+                std::cout << "Loss: " << loss_val << std::endl;
         }
 }
 

@@ -6,7 +6,7 @@ ArchitectureImpl::ArchitectureImpl(int in_features, int out_features)
       dense3_{torch::nn::Linear{100, 6}},
       conv1_{torch::nn::Conv2dOptions(3, 100, 1)},
       conv2_{torch::nn::Conv2dOptions(100, 200, 1)},
-      dense4_{torch::nn::Linear{200, 1}}
+      dense4_{torch::nn::Linear{200 * 1 * 6, 6}}
 
 {
     register_module("dense1_", dense1_);
@@ -31,7 +31,8 @@ torch::Tensor ArchitectureImpl::forward(torch::Tensor &input)
 
     x = torch::relu(conv1_(x));
     x = conv2_(x);
-    x = x.view({6, 200});
+    std::cout << x.sizes() << '\n';
+    x = x.view({x.size(0), 200 * 1 * 6});
     x = dense4_->forward(x);
 
     return x;
