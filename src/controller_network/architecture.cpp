@@ -17,14 +17,22 @@ ArchitectureImpl::ArchitectureImpl(int in_features, int out_features)
     register_module("dense4_", dense4_);
 }
 
-torch::Tensor ArchitectureImpl::forward(torch::Tensor x1, torch::Tensor x2, torch::Tensor x3)
+torch::Tensor ArchitectureImpl::forward(torch::Tensor &input)
 {
-    x1 = torch::relu(dense1_->forward(x1)); // [batch_size, N_HIDDEN1]
-    x1 = torch::relu(dense2_->forward(x1)); // [batch_size, N_HIDDEN2]
-    x1 = torch::relu(dense3_->forward(x1)); // [batch_size, N_HIDDEN2]
-    x1 = torch::cat({x1, x2, x3}, 1);
-    x1 = torch::relu(conv1_(x1));
-    x1 = conv2_(x1);
-    x1 = x1.view({6, 200});
-    return dense4_->forward(x1);
+    auto xv = input.split(12, 3);
+
+    xv[0] = torch::relu(dense1_->forward(xv[0])); // [batch_size, N_HIDDEN1]
+    xv[0] = torch::relu(dense2_->forward(xv[0])); // [batch_size, N_HIDDEN2]
+    xv[0] = torch::relu(dense3_->forward(xv[0])); // [batch_size, N_HIDDEN2]
+
+    std::vector<torch::Tensor> xvv = xv[1].split(6, 3);
+
+    auto x = torch::cat({xv[0], xvv[0], xvv[1]}, 1);
+
+    x = torch::relu(conv1_(x));
+    x = conv2_(x);
+    x = x.view({6, 200});
+    x = dense4_->forward(x);
+
+    return x;
 }

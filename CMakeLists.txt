@@ -40,7 +40,8 @@ include_directories(
 #############
 
 add_library(nn_adaptive_controller
-    src/controller_network/architecture.cpp)
+    src/controller_network/architecture.cpp
+    src/controller_network/custom_dataset.cpp)
 
 target_link_libraries(nn_adaptive_controller ${catkin_LIBRARIES} ${TORCH_LIBRARIES})
 set_property(TARGET nn_adaptive_controller PROPERTY CXX_STANDARD 14)
