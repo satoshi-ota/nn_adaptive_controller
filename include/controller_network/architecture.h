@@ -17,6 +17,7 @@ private:
     torch::nn::Linear dense2_;
     torch::nn::Linear dense3_;
     torch::nn::Linear dense4_;
+    torch::nn::Linear dense5_;
     torch::nn::Conv2d conv1_;
     torch::nn::Conv2d conv2_;
 };

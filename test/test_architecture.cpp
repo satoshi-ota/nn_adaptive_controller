@@ -11,12 +11,12 @@ TEST(ArchitectureImpl, forward)
         auto col = 24;
         auto cha = 1;
         auto x = torch::ones({batch_size, cha, row, col});
-        std::cout << x << '\n';
+        // std::cout << x << '\n';
         // auto x1 = torch::ones({batch_size, cha, row, col});
         // auto x2 = torch::ones({batch_size, cha, 1, 6});
         // auto x3 = torch::ones({batch_size, cha, 1, 6});
         int in_features = row * col * cha;
-        int out_features = 6;
+        int out_features = 8;
 
         Architecture architecture{in_features, out_features};
 
@@ -52,7 +52,7 @@ TEST(CustomDateset, forward)
                         ASSERT_EQ(1, batch.data[i].size(1));
                         ASSERT_EQ(24, batch.data[i].size(2));
 
-                        ASSERT_EQ(batch.target.sizes(), (std::vector<std::int64_t>{32, 1, 6}));
+                        ASSERT_EQ(batch.target.sizes(), (std::vector<std::int64_t>{32, 1, 8}));
                 }
         }
 }
@@ -60,6 +60,7 @@ TEST(CustomDateset, forward)
 TEST(Training, forward)
 {
         constexpr double LEARNING_RATE{0.0005};
+        int kNumberOfEpochs = 10;
 
         EXPECT_TRUE(torch::cuda::is_available());
         torch::DeviceType device_type{};
@@ -87,31 +88,33 @@ TEST(Training, forward)
 
         auto ds = CustomDataset{ifss}.map(torch::data::transforms::Stack<>());
 
-        constexpr int BATCH_SIZE = 32;
+        constexpr int BATCH_SIZE = 256;
 
         auto data_loader = torch::data::make_data_loader(
             std::move(ds),
             torch::data::DataLoaderOptions().batch_size(BATCH_SIZE).workers(2).drop_last(true));
-
-        for (auto &batch : *data_loader)
+        for (int64_t epoch = 1; epoch <= kNumberOfEpochs; ++epoch)
         {
-                auto batch_size = batch.data.size(0);
-                ASSERT_EQ(batch.data.sizes(), (std::vector<std::int64_t>{32, 1, 1, 24}));
-                ASSERT_EQ(BATCH_SIZE, batch_size);
+                for (auto &batch : *data_loader)
+                {
+                        auto batch_size = batch.data.size(0);
+                        ASSERT_EQ(batch.data.sizes(), (std::vector<std::int64_t>{256, 1, 1, 24}));
+                        ASSERT_EQ(BATCH_SIZE, batch_size);
 
-                auto data = batch.data.to(device);
-                auto targets = batch.target.to(device);
-                optimizer.zero_grad();
+                        auto data = batch.data.to(device);
+                        auto targets = batch.target.to(device);
+                        optimizer.zero_grad();
 
-                auto output = model->forward(data);
+                        auto output = model->forward(data);
 
-                auto loss = torch::mse_loss(output, targets);
-                float loss_val = loss.item<float>();
+                        auto loss = torch::mse_loss(output, targets);
+                        float loss_val = loss.item<float>();
 
-                loss.backward();
-                optimizer.step();
+                        loss.backward();
+                        optimizer.step();
 
-                std::cout << "Loss: " << loss_val << std::endl;
+                        std::cout << "Loss: " << loss_val << std::endl;
+                }
         }
 }
 

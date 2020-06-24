@@ -20,7 +20,7 @@ std::pair<torch::Tensor, torch::Tensor> DatasetReader::loadFromCSV(std::string l
         in_vec.push_back(std::stoi(strvec[i]));
     }
 
-    for (int i = 24; i < 30; i++)
+    for (int i = 24; i < 32; i++)
     {
         out_vec.push_back(std::stoi(strvec[i]));
     }
