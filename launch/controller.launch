@@ -1,0 +1,10 @@
+<launch>
+	<arg name="mav_name" default="pelican" />
+	<group ns="$(arg mav_name)">
+		<node name="neural_adaptive_controller_node" pkg="nn_adaptive_controller" type="neural_adaptive_controller_node" output="screen">
+			<rosparam command="load" file="$(find nn_adaptive_controller)/resource/$(arg mav_name).yaml" />
+			<rosparam command="load" file="$(find nn_adaptive_controller)/resource/controller.yaml" />
+			<remap from="pelican/payload/odom" to="/pelican/payload/odom" />
+		</node>
+	</group>
+</launch>

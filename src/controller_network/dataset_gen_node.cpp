@@ -11,9 +11,10 @@ namespace jetrov_control
         odom_sub_.subscribe(nh_, "/pelican/payload/odom", 1);
         rotor_sub_1_.subscribe(nh_, "/pelican1/command/motor_speed", 1);
         rotor_sub_2_.subscribe(nh_, "/pelican2/command/motor_speed", 1);
+        imu_sub_.subscribe(nh_, "/pelican/payload/imu/data", 1);
 
-        sync_.reset(new Sync(MySyncPolicy(10), odom_sub_, rotor_sub_1_, rotor_sub_2_));
-        sync_->registerCallback(boost::bind(&DatasetGenNode::StatusCB, this, _1, _2, _3));
+        sync_.reset(new Sync(MySyncPolicy(10), odom_sub_, rotor_sub_1_, rotor_sub_2_, imu_sub_));
+        sync_->registerCallback(boost::bind(&DatasetGenNode::StatusCB, this, _1, _2, _3, _4));
 
         std::string filename = "data.csv";
 
@@ -26,7 +27,8 @@ namespace jetrov_control
 
     void DatasetGenNode::StatusCB(const nav_msgs::OdometryConstPtr &msg_1,
                                   const mav_msgs::ActuatorsConstPtr &msg_2,
-                                  const mav_msgs::ActuatorsConstPtr &msg_3)
+                                  const mav_msgs::ActuatorsConstPtr &msg_3,
+                                  const sensor_msgs::ImuConstPtr &msg_4)
     {
         ROS_INFO_ONCE("Got first data! Generate csv");
 
@@ -43,8 +45,8 @@ namespace jetrov_control
              << roll << ", " << pitch << ", " << yaw << ", "
              << twist.linear.x << ", " << twist.linear.y << ", " << twist.linear.z << ", "
              << twist.angular.x << ", " << twist.angular.y << ", " << twist.angular.z << ", "
-             << twist.linear.x << ", " << twist.linear.y << ", " << twist.linear.z << ", "
-             << twist.angular.x << ", " << twist.angular.y << ", " << twist.angular.z << ", "
+             << msg_4->linear_acceleration.x << ", " << msg_4->linear_acceleration.y << ", " << msg_4->linear_acceleration.z << ", "
+             << 0.0 << ", " << 0.0 << ", " << 0.0 << ", "
              << twist.linear.x << ", " << twist.linear.y << ", " << twist.linear.z << ", "
              << twist.angular.x << ", " << twist.angular.y << ", " << twist.angular.z << ", "
              << msg_2->angular_velocities[0] / 838 << ", " << msg_2->angular_velocities[1] / 838 << ", " << msg_2->angular_velocities[2] / 838 << ", " << msg_2->angular_velocities[3] / 838 << ", "

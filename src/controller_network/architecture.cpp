@@ -55,7 +55,7 @@ torch::Tensor ArchitectureImpl::forward(torch::Tensor &input)
 
     x = dense5_->forward(x);
 
-    std::cout << dense5_->weight << '\n';
+    // std::cout << dense5_->weight << '\n';
 
     return x;
 }

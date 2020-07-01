@@ -24,6 +24,11 @@ public:
         mode_ = mode;
     }
 
+    Mode checkMode()
+    {
+        return mode_;
+    }
+
 private:
     torch::nn::Linear dense1_;
     torch::nn::Linear dense2_;

@@ -3,6 +3,10 @@
 #include <controller_network/custom_dataset.h>
 #include <gtest/gtest.h>
 
+#include <ros/ros.h>
+
+#include "neural_adaptive_controller/neural_adaptive_controller.h"
+
 // TEST(ArchitectureImpl, forward)
 // {
 
@@ -116,6 +120,9 @@ TEST(Training, forward)
                         std::cout << "Loss: " << loss_val << std::endl;
                 }
         }
+
+        // torch::save(model, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/model.pt");
+        // torch::save(optimizer, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/opt.pt");
 }
 
 TEST(Adaptation, outputLayer)
@@ -140,11 +147,14 @@ TEST(Adaptation, outputLayer)
         Architecture model(100, 100);
         model->to(device);
         // model->updateMode(BACKPROP);
-        model->updateMode(ADAPTATION);
+        // model->updateMode(ADAPTATION);
 
         torch::optim::Adam optimizer{
             model->parameters(),
             torch::optim::AdamOptions(LEARNING_RATE)};
+
+        // torch::load(model, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/model.pt");
+        // torch::load(optimizer, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/opt.pt");
 
         torch::manual_seed(1);
         std::vector<std::ifstream> ifss{};
@@ -180,6 +190,13 @@ TEST(Adaptation, outputLayer)
                 }
         }
 }
+
+// TEST(NeuralAdaptiveController, neural_adaptive_controller)
+// {
+//         ros::NodeHandle nh;
+//         ros::NodeHandle private_nh("~");
+//         neural_adaptive_controller::NeuralAdaptiveController neural_adaptive_controller(nh, private_nh);
+// }
 
 int main(int argc, char **argv)
 {
