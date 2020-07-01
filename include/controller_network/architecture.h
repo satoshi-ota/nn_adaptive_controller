@@ -3,6 +3,13 @@
 #define NN_ADAPTIVE_CONTROLLER_ARCHITECTURE_H
 #include <torch/torch.h>
 
+enum Mode
+{
+    OFFLINE,
+    BACKPROP,
+    ADAPTATION
+};
+
 class ArchitectureImpl : public torch::nn::Module
 {
 public:
@@ -12,6 +19,11 @@ public:
 
     torch::Tensor forward(torch::Tensor &input);
 
+    void updateMode(Mode mode)
+    {
+        mode_ = mode;
+    }
+
 private:
     torch::nn::Linear dense1_;
     torch::nn::Linear dense2_;
@@ -20,6 +32,8 @@ private:
     torch::nn::Linear dense5_;
     torch::nn::Conv2d conv1_;
     torch::nn::Conv2d conv2_;
+
+    Mode mode_;
 };
 
 TORCH_MODULE(Architecture);

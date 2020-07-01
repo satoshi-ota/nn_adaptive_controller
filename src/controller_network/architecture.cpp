@@ -7,7 +7,8 @@ ArchitectureImpl::ArchitectureImpl(int in_features, int out_features)
       conv1_{torch::nn::Conv2dOptions(3, 100, 1)},
       conv2_{torch::nn::Conv2dOptions(100, 200, 1)},
       dense4_{torch::nn::Linear{200 * 1 * 6, 6}},
-      dense5_{torch::nn::Linear{6, 8}}
+      dense5_{torch::nn::Linear{6, 8}},
+      mode_{OFFLINE}
 
 {
     register_module("dense1_", dense1_);
@@ -36,9 +37,25 @@ torch::Tensor ArchitectureImpl::forward(torch::Tensor &input)
     // std::cout << x.sizes() << '\n';
     x = x.view({x.size(0), 200 * 1 * 6});
     x = dense4_->forward(x);
+
+    if (mode_ == ADAPTATION)
+    {
+        std::cout << "ADAPTATION" << '\n';
+        auto new_weight = torch::randn({8, 6});
+        auto new_weight_gpu = new_weight.to(torch::kCUDA);
+        dense5_->weight = new_weight_gpu;
+    }
+
+    if (mode_ == BACKPROP)
+    {
+        std::cout << "BACKPROP" << '\n';
+        dense5_->weight.set_requires_grad(false);
+        dense5_->bias.set_requires_grad(false);
+    }
+
     x = dense5_->forward(x);
 
-    // std::cout << x.sizes() << '\n';
+    std::cout << dense5_->weight << '\n';
 
     return x;
 }

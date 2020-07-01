@@ -3,27 +3,27 @@
 #include <controller_network/custom_dataset.h>
 #include <gtest/gtest.h>
 
-TEST(ArchitectureImpl, forward)
-{
+// TEST(ArchitectureImpl, forward)
+// {
 
-        auto batch_size = 1;
-        auto row = 1;
-        auto col = 24;
-        auto cha = 1;
-        auto x = torch::ones({batch_size, cha, row, col});
-        // std::cout << x << '\n';
-        // auto x1 = torch::ones({batch_size, cha, row, col});
-        // auto x2 = torch::ones({batch_size, cha, 1, 6});
-        // auto x3 = torch::ones({batch_size, cha, 1, 6});
-        int in_features = row * col * cha;
-        int out_features = 8;
+//         auto batch_size = 1;
+//         auto row = 1;
+//         auto col = 24;
+//         auto cha = 1;
+//         auto x = torch::ones({batch_size, cha, row, col});
+//         // std::cout << x << '\n';
+//         // auto x1 = torch::ones({batch_size, cha, row, col});
+//         // auto x2 = torch::ones({batch_size, cha, 1, 6});
+//         // auto x3 = torch::ones({batch_size, cha, 1, 6});
+//         int in_features = row * col * cha;
+//         int out_features = 8;
 
-        Architecture architecture{in_features, out_features};
+//         Architecture architecture{in_features, out_features};
 
-        auto y = architecture->forward(x);
+//         auto y = architecture->forward(x);
 
-        ASSERT_EQ((std::vector<int64_t>{batch_size, out_features}), y.sizes());
-}
+//         ASSERT_EQ((std::vector<int64_t>{batch_size, out_features}), y.sizes());
+// }
 
 TEST(CustomDateset, forward)
 {
@@ -78,6 +78,69 @@ TEST(Training, forward)
 
         Architecture model(100, 100);
         model->to(device);
+
+        torch::optim::Adam optimizer{
+            model->parameters(),
+            torch::optim::AdamOptions(LEARNING_RATE)};
+
+        torch::manual_seed(1);
+        std::vector<std::ifstream> ifss{};
+
+        auto ds = CustomDataset{ifss}.map(torch::data::transforms::Stack<>());
+
+        constexpr int BATCH_SIZE = 256;
+
+        auto data_loader = torch::data::make_data_loader(
+            std::move(ds),
+            torch::data::DataLoaderOptions().batch_size(BATCH_SIZE).workers(2).drop_last(true));
+        for (int64_t epoch = 1; epoch <= kNumberOfEpochs; ++epoch)
+        {
+                for (auto &batch : *data_loader)
+                {
+                        auto batch_size = batch.data.size(0);
+                        ASSERT_EQ(batch.data.sizes(), (std::vector<std::int64_t>{256, 1, 1, 24}));
+                        ASSERT_EQ(BATCH_SIZE, batch_size);
+
+                        auto data = batch.data.to(device);
+                        auto targets = batch.target.to(device);
+                        optimizer.zero_grad();
+
+                        auto output = model->forward(data);
+
+                        auto loss = torch::mse_loss(output, targets);
+                        float loss_val = loss.item<float>();
+
+                        loss.backward();
+                        optimizer.step();
+
+                        std::cout << "Loss: " << loss_val << std::endl;
+                }
+        }
+}
+
+TEST(Adaptation, outputLayer)
+{
+        constexpr double LEARNING_RATE{0.0005};
+        int kNumberOfEpochs = 10;
+
+        EXPECT_TRUE(torch::cuda::is_available());
+        torch::DeviceType device_type{};
+        if (torch::cuda::is_available())
+        {
+                std::cout << "CUDA available! Training on GPU." << std::endl;
+                device_type = torch::kCUDA;
+        }
+        else
+        {
+                std::cout << "Training on CPU." << std::endl;
+                device_type = torch::kCPU;
+        }
+        torch::Device device{device_type};
+
+        Architecture model(100, 100);
+        model->to(device);
+        // model->updateMode(BACKPROP);
+        model->updateMode(ADAPTATION);
 
         torch::optim::Adam optimizer{
             model->parameters(),
