@@ -41,16 +41,23 @@ namespace jetrov_control
 
         geometry_msgs::Twist twist = msg_1->twist.twist;
 
+        // posatt now
         ofs_ << pose.position.x << ", " << pose.position.y << ", " << pose.position.z << ", "
              << roll << ", " << pitch << ", " << yaw << ", "
+             // velrate now
              << twist.linear.x << ", " << twist.linear.y << ", " << twist.linear.z << ", "
              << twist.angular.x << ", " << twist.angular.y << ", " << twist.angular.z << ", "
+             // acc desired
              << msg_4->linear_acceleration.x << ", " << msg_4->linear_acceleration.y << ", " << msg_4->linear_acceleration.z << ", "
              << 0.0 << ", " << 0.0 << ", " << 0.0 << ", "
+             // vel desired
              << twist.linear.x << ", " << twist.linear.y << ", " << twist.linear.z << ", "
              << twist.angular.x << ", " << twist.angular.y << ", " << twist.angular.z << ", "
-             << msg_2->angular_velocities[0] / 838 << ", " << msg_2->angular_velocities[1] / 838 << ", " << msg_2->angular_velocities[2] / 838 << ", " << msg_2->angular_velocities[3] / 838 << ", "
-             << msg_3->angular_velocities[0] / 838 << ", " << msg_3->angular_velocities[1] / 838 << ", " << msg_3->angular_velocities[2] / 838 << ", " << msg_3->angular_velocities[3] / 838 << std::endl;
+             // output
+             << msg_2->angular_velocities[0] << ", " << msg_2->angular_velocities[1] << ", " << msg_2->angular_velocities[2] << ", " << msg_2->angular_velocities[3] << ", "
+             << msg_3->angular_velocities[0] << ", " << msg_3->angular_velocities[1] << ", " << msg_3->angular_velocities[2] << ", " << msg_3->angular_velocities[3] << std::endl;
+        // << msg_2->angular_velocities[0] / 838 << ", " << msg_2->angular_velocities[1] / 838 << ", " << msg_2->angular_velocities[2] / 838 << ", " << msg_2->angular_velocities[3] / 838 << ", "
+        // << msg_3->angular_velocities[0] / 838 << ", " << msg_3->angular_velocities[1] / 838 << ", " << msg_3->angular_velocities[2] / 838 << ", " << msg_3->angular_velocities[3] / 838 << std::endl;
     }
 
 } //namespace jetrov_control

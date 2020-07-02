@@ -65,8 +65,8 @@ namespace neural_adaptive_controller
 
         void InitializeParameters();
         void CalculateRotorVelocities(const Eigen::VectorXd &nn_input, Eigen::VectorXd *rotor_velocities);
-        void CalculateNNInput(const Eigen::VectorXd &x_d,
-                              const Eigen::VectorXd &v_d,
+        void CalculateNNInput(const Eigen::VectorXd &x_n,
+                              const Eigen::VectorXd &v_n,
                               const Eigen::VectorXd &x_e,
                               const Eigen::VectorXd &v_e,
                               Eigen::VectorXd *nn_input);
@@ -110,6 +110,7 @@ namespace neural_adaptive_controller
         Eigen::MatrixX4d angular_acc_to_rotor_velocities_;
 
         Eigen::MatrixXd allocate_rotor_velocities_;
+        Eigen::MatrixXd force_torque_mapping_;
 
         mav_msgs::EigenTrajectoryPoint command_trajectory_;
         EigenOdometry odometry_;
@@ -117,7 +118,7 @@ namespace neural_adaptive_controller
         // void ComputeDesiredAngularAcc(const Eigen::Vector3d &acceleration,
         //                               Eigen::Vector3d *angular_acceleration) const;
         // void ComputeDesiredAcceleration(Eigen::Vector3d *acceleration) const;
-        void ComputePosAtt(Eigen::VectorXd *posatt_now, Eigen::VectorXd *posatt_err) const;
+        void ComputePosAtt(Eigen::VectorXd *posatt_now, Eigen::VectorXd *posatt_err);
         void ComputeVelRate(Eigen::VectorXd *velrate_now, Eigen::VectorXd *velrate_err) const;
 
         void TimedCommandCallback(const ros::TimerEvent &e);

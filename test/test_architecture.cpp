@@ -64,7 +64,7 @@ TEST(CustomDateset, forward)
 TEST(Training, forward)
 {
         constexpr double LEARNING_RATE{0.0005};
-        int kNumberOfEpochs = 10;
+        int kNumberOfEpochs = 100;
 
         EXPECT_TRUE(torch::cuda::is_available());
         torch::DeviceType device_type{};
@@ -91,12 +91,14 @@ TEST(Training, forward)
         std::vector<std::ifstream> ifss{};
 
         auto ds = CustomDataset{ifss}.map(torch::data::transforms::Stack<>());
+        // auto ds = CustomDataset{ifss}.map(torch::data::transforms::Normalize<>(0.0, 1.0)).map(torch::data::transforms::Stack<>());
 
         constexpr int BATCH_SIZE = 256;
 
         auto data_loader = torch::data::make_data_loader(
             std::move(ds),
             torch::data::DataLoaderOptions().batch_size(BATCH_SIZE).workers(2).drop_last(true));
+
         for (int64_t epoch = 1; epoch <= kNumberOfEpochs; ++epoch)
         {
                 for (auto &batch : *data_loader)
@@ -121,11 +123,11 @@ TEST(Training, forward)
                 }
         }
 
-        // torch::save(model, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/model.pt");
-        // torch::save(optimizer, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/opt.pt");
+        torch::save(model, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/model.pt");
+        torch::save(optimizer, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/opt.pt");
 }
 
-TEST(Adaptation, outputLayer)
+TEST(Test, outputLayer)
 {
         constexpr double LEARNING_RATE{0.0005};
         int kNumberOfEpochs = 10;
@@ -153,7 +155,7 @@ TEST(Adaptation, outputLayer)
             model->parameters(),
             torch::optim::AdamOptions(LEARNING_RATE)};
 
-        // torch::load(model, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/model.pt");
+        torch::load(model, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/model.pt");
         // torch::load(optimizer, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/opt.pt");
 
         torch::manual_seed(1);
@@ -176,17 +178,17 @@ TEST(Adaptation, outputLayer)
 
                         auto data = batch.data.to(device);
                         auto targets = batch.target.to(device);
-                        optimizer.zero_grad();
+                        // optimizer.zero_grad();
 
                         auto output = model->forward(data);
 
                         auto loss = torch::mse_loss(output, targets);
                         float loss_val = loss.item<float>();
 
-                        loss.backward();
-                        optimizer.step();
+                        // loss.backward();
+                        // optimizer.step();
 
-                        std::cout << "Loss: " << loss_val << std::endl;
+                        std::cout << "Test Loss: " << loss_val << std::endl;
                 }
         }
 }

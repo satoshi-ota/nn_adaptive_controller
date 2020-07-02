@@ -6,8 +6,9 @@ ArchitectureImpl::ArchitectureImpl(int in_features, int out_features)
       dense3_{torch::nn::Linear{100, 6}},
       conv1_{torch::nn::Conv2dOptions(3, 100, 1)},
       conv2_{torch::nn::Conv2dOptions(100, 200, 1)},
-      dense4_{torch::nn::Linear{200 * 1 * 6, 6}},
-      dense5_{torch::nn::Linear{6, 8}},
+      dense4_{torch::nn::Linear{150, 1}},
+      //   dense4_{torch::nn::Linear{200 * 1 * 6, 6}},
+      //   dense5_{torch::nn::Linear{6, 8}},
       mode_{OFFLINE}
 
 {
@@ -17,7 +18,7 @@ ArchitectureImpl::ArchitectureImpl(int in_features, int out_features)
     register_module("conv1_", conv1_);
     register_module("conv2_", conv2_);
     register_module("dense4_", dense4_);
-    register_module("dense5_", dense5_);
+    // register_module("dense5_", dense5_);
 }
 
 torch::Tensor ArchitectureImpl::forward(torch::Tensor &input)
@@ -35,27 +36,30 @@ torch::Tensor ArchitectureImpl::forward(torch::Tensor &input)
     x = torch::relu(conv1_(x));
     x = conv2_(x);
     // std::cout << x.sizes() << '\n';
-    x = x.view({x.size(0), 200 * 1 * 6});
+    x = x.view({x.size(0), 1, 8, 150});
+    // x = x.view({x.size(0), 200 * 1 * 6});
+    // std::cout << x.sizes() << '\n';
+
     x = dense4_->forward(x);
 
-    if (mode_ == ADAPTATION)
-    {
-        std::cout << "ADAPTATION" << '\n';
-        auto new_weight = torch::randn({8, 6});
-        auto new_weight_gpu = new_weight.to(torch::kCUDA);
-        dense5_->weight = new_weight_gpu;
-    }
+    // if (mode_ == ADAPTATION)
+    // {
+    //     std::cout << "ADAPTATION" << '\n';
+    //     auto new_weight = torch::randn({8, 6});
+    //     auto new_weight_gpu = new_weight.to(torch::kCUDA);
+    //     dense5_->weight = new_weight_gpu;
+    // }
 
-    if (mode_ == BACKPROP)
-    {
-        std::cout << "BACKPROP" << '\n';
-        dense5_->weight.set_requires_grad(false);
-        dense5_->bias.set_requires_grad(false);
-    }
+    // if (mode_ == BACKPROP)
+    // {
+    //     std::cout << "BACKPROP" << '\n';
+    //     dense5_->weight.set_requires_grad(false);
+    //     dense5_->bias.set_requires_grad(false);
+    // }
 
-    x = dense5_->forward(x);
+    // x = dense5_->forward(x);
 
-    // std::cout << dense5_->weight << '\n';
+    std::cout << dense4_->weight.sizes() << '\n';
 
     return x;
 }

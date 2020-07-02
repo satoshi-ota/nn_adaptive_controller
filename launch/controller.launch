@@ -5,6 +5,8 @@
 			<rosparam command="load" file="$(find nn_adaptive_controller)/resource/$(arg mav_name).yaml" />
 			<rosparam command="load" file="$(find nn_adaptive_controller)/resource/controller.yaml" />
 			<remap from="pelican/payload/odom" to="/pelican/payload/odom" />
+			<remap from="/pelican1/neural_adaptive_controller/command/motor_speed" to="/pelican1/command/motor_speed" />
+			<remap from="/pelican2/neural_adaptive_controller/command/motor_speed" to="/pelican2/command/motor_speed" />
 		</node>
 	</group>
 </launch>
