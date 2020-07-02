@@ -15,18 +15,21 @@ std::pair<torch::Tensor, torch::Tensor> DatasetReader::loadFromCSV(std::string l
     in_vec.clear();
     out_vec.clear();
 
-    for (int i = 0; i < 24; i++)
+    for (int i = 0; i < 12; i++)
     {
-        in_vec.push_back(std::stoi(strvec[i]));
+        in_vec.push_back(std::stof(strvec[i]));
     }
 
-    for (int i = 24; i < 32; i++)
+    for (int i = 12; i < 15; i++)
     {
-        out_vec.push_back(std::stoi(strvec[i]));
+        out_vec.push_back(std::stof(strvec[i]));
     }
 
     input_ = torch::from_blob(in_vec.data(), {1, 1, static_cast<unsigned int>(in_vec.size())}).clone();
     output_ = torch::from_blob(out_vec.data(), {1, static_cast<unsigned int>(out_vec.size())}).clone();
+
+    // std::cout << in_vec << '\n';
+    // std::cout << out_vec << '\n';
 
     return {input_, output_};
 }

@@ -24,14 +24,14 @@ public:
         mode_ = mode;
     }
 
-    bool updateOutputLayer(const torch::Tensor &s)
-    {
-        auto new_weight = dense4_->weight;
-        new_weight = new_weight.mv(s);
-        // new_weight = ;
-        auto new_weight_gpu = new_weight.to(torch::kCUDA);
-        dense4_->weight = new_weight_gpu;
-    }
+    // bool updateOutputLayer(const torch::Tensor &s)
+    // {
+    //     auto new_weight = dense4_->weight;
+    //     new_weight = new_weight.mv(s);
+    //     // new_weight = ;
+    //     auto new_weight_gpu = new_weight.to(torch::kCUDA);
+    //     dense4_->weight = new_weight_gpu;
+    // }
 
     Mode checkMode()
     {

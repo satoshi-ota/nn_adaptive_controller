@@ -12,9 +12,10 @@ namespace jetrov_control
         rotor_sub_1_.subscribe(nh_, "/pelican1/command/motor_speed", 1);
         rotor_sub_2_.subscribe(nh_, "/pelican2/command/motor_speed", 1);
         imu_sub_.subscribe(nh_, "/pelican/payload/imu/data", 1);
+        angular_acceleration_thrust_reference_sub_.subscribe(nh_, "/pelican/command/angular_acceleration_thrust", 1);
 
-        sync_.reset(new Sync(MySyncPolicy(10), odom_sub_, rotor_sub_1_, rotor_sub_2_, imu_sub_));
-        sync_->registerCallback(boost::bind(&DatasetGenNode::StatusCB, this, _1, _2, _3, _4));
+        sync_.reset(new Sync(MySyncPolicy(10), odom_sub_, angular_acceleration_thrust_reference_sub_));
+        sync_->registerCallback(boost::bind(&DatasetGenNode::StatusCB, this, _1, _2));
 
         std::string filename = "data.csv";
 
@@ -26,9 +27,7 @@ namespace jetrov_control
     DatasetGenNode::~DatasetGenNode() {}
 
     void DatasetGenNode::StatusCB(const nav_msgs::OdometryConstPtr &msg_1,
-                                  const mav_msgs::ActuatorsConstPtr &msg_2,
-                                  const mav_msgs::ActuatorsConstPtr &msg_3,
-                                  const sensor_msgs::ImuConstPtr &msg_4)
+                                  const geometry_msgs::WrenchStampedConstPtr &msg_2)
     {
         ROS_INFO_ONCE("Got first data! Generate csv");
 
@@ -42,20 +41,12 @@ namespace jetrov_control
         geometry_msgs::Twist twist = msg_1->twist.twist;
 
         // posatt now
-        ofs_ << pose.position.x << ", " << pose.position.y << ", " << pose.position.z << ", "
-             << roll << ", " << pitch << ", " << yaw << ", "
-             // velrate now
-             << twist.linear.x << ", " << twist.linear.y << ", " << twist.linear.z << ", "
+        ofs_ << roll << ", " << pitch << ", " << yaw << ", "
              << twist.angular.x << ", " << twist.angular.y << ", " << twist.angular.z << ", "
-             // acc desired
-             << msg_4->linear_acceleration.x << ", " << msg_4->linear_acceleration.y << ", " << msg_4->linear_acceleration.z << ", "
              << 0.0 << ", " << 0.0 << ", " << 0.0 << ", "
-             // vel desired
-             << twist.linear.x << ", " << twist.linear.y << ", " << twist.linear.z << ", "
              << twist.angular.x << ", " << twist.angular.y << ", " << twist.angular.z << ", "
              // output
-             << msg_2->angular_velocities[0] << ", " << msg_2->angular_velocities[1] << ", " << msg_2->angular_velocities[2] << ", " << msg_2->angular_velocities[3] << ", "
-             << msg_3->angular_velocities[0] << ", " << msg_3->angular_velocities[1] << ", " << msg_3->angular_velocities[2] << ", " << msg_3->angular_velocities[3] << std::endl;
+             << msg_2->wrench.torque.x << ", " << msg_2->wrench.torque.y << ", " << msg_2->wrench.torque.z << std::endl;
         // << msg_2->angular_velocities[0] / 838 << ", " << msg_2->angular_velocities[1] / 838 << ", " << msg_2->angular_velocities[2] / 838 << ", " << msg_2->angular_velocities[3] / 838 << ", "
         // << msg_3->angular_velocities[0] / 838 << ", " << msg_3->angular_velocities[1] / 838 << ", " << msg_3->angular_velocities[2] / 838 << ", " << msg_3->angular_velocities[3] / 838 << std::endl;
     }

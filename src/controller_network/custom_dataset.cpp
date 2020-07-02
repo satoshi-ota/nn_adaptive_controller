@@ -5,8 +5,8 @@ CustomDataset::CustomDataset(std::vector<std::ifstream> &ifss)
     : inputs_{},
       outputs_{}
 {
-    inputs_.reserve(64 * 24);
-    outputs_.reserve(64 * 8);
+    inputs_.reserve(256 * 12);
+    outputs_.reserve(256 * 3);
 
     std::ifstream ifs("/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/data.csv");
 

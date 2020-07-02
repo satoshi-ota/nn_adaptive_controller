@@ -242,22 +242,24 @@ namespace neural_adaptive_controller
         // Eigen::Vector3d x_error;
         // position_error = odometry_.position - command_trajectory_.position_W;
 
-        Eigen::VectorXd posatt_now, posatt_err;
-        ComputePosAtt(&posatt_now, &posatt_err);
-        PRINT_MAT(posatt_now);
-        PRINT_MAT(posatt_err);
+        Eigen::Vector3d acceleration;
+
+        Eigen::Vector3d att_now, att_err;
+        ComputePosAtt(&att_now, &att_err, &acceleration);
+        PRINT_MAT(att_now);
+        PRINT_MAT(att_err);
 
         // ROS_INFO("GOOD3");
-        Eigen::VectorXd velrate_now, velrate_err;
-        ComputeVelRate(&velrate_now, &velrate_err);
-        PRINT_MAT(velrate_now);
-        PRINT_MAT(velrate_err);
+        Eigen::Vector3d rate_now, rate_err;
+        ComputeVelRate(&rate_now, &rate_err);
+        PRINT_MAT(rate_now);
+        PRINT_MAT(rate_err);
         // ROS_INFO("GOOD4");
         Eigen::VectorXd nn_input;
-        CalculateNNInput(posatt_now, velrate_now, posatt_err, velrate_err, &nn_input);
+        CalculateNNInput(att_now, rate_now, att_err, rate_err, &nn_input);
         // ROS_INFO("GOOD5");
         Eigen::VectorXd ref_rotor_velocities;
-        CalculateRotorVelocities(nn_input, &ref_rotor_velocities);
+        CalculateRotorVelocities(acceleration, nn_input, &ref_rotor_velocities);
         // ROS_INFO("GOOD6");
         // Todo(ffurrer): Do this in the conversions header.
         mav_msgs::ActuatorsPtr actuator_msg(new mav_msgs::Actuators);
@@ -289,10 +291,10 @@ namespace neural_adaptive_controller
         controller_active_ = true;
     }
 
-    void NeuralAdaptiveController::CalculateNNInput(const Eigen::VectorXd &x_n,
-                                                    const Eigen::VectorXd &v_n,
-                                                    const Eigen::VectorXd &x_e,
-                                                    const Eigen::VectorXd &v_e,
+    void NeuralAdaptiveController::CalculateNNInput(const Eigen::Vector3d &x_n,
+                                                    const Eigen::Vector3d &v_n,
+                                                    const Eigen::Vector3d &x_e,
+                                                    const Eigen::Vector3d &v_e,
                                                     Eigen::VectorXd *nn_input)
     {
         assert(nn_input);
@@ -304,17 +306,14 @@ namespace neural_adaptive_controller
 
         nn_input->resize(6 * 4);
 
-        Eigen::VectorXd a_d = Eigen::VectorXd::Zero(6);
-        Eigen::MatrixXd R = Eigen::MatrixXd::Zero(6, 6);
-        R << 6, 20, 6, 0, 0, 0,
-            1, 15, 15, 1, 0, 0,
-            0, 6, 20, 6, 0, 0,
-            0, 1, 15, 15, 1, 0,
-            0, 0, 6, 20, 6, 0,
-            0, 0, 1, 15, 15, 1;
+        Eigen::Vector3d a_d = Eigen::Vector3d::Zero();
+        Eigen::MatrixXd R = Eigen::MatrixXd::Zero(3, 3);
+        R << 3, 1, 0,
+            1, 2, 0,
+            0, 3, 1;
 
-        Eigen::VectorXd v_r = (v_n - v_e) + 0.1 * R * x_e;
-        Eigen::VectorXd a_r = a_d + 0.1 * R * v_e;
+        Eigen::Vector3d v_r = (v_n - v_e) + 0.1 * R * x_e;
+        Eigen::Vector3d a_r = a_d + 0.1 * R * v_e;
         PRINT_MAT(v_r);
         PRINT_MAT(a_r);
         // ROS_INFO("CalculateNNInput1");
@@ -329,9 +328,9 @@ namespace neural_adaptive_controller
         *nn_input = v_in;
     }
 
-    void NeuralAdaptiveController::CalculateRotorVelocities(const Eigen::VectorXd &input, Eigen::VectorXd *rotor_velocities)
+    void NeuralAdaptiveController::CalculateRotorVelocities(const Eigen::Vector3d &acceleration, const Eigen::VectorXd &input, Eigen::VectorXd *rotor_velocities)
     {
-        assert(input.size() == 24);
+        assert(input.size() == 12);
 
         rotor_velocities->resize(vehicle_parameters_.rotor_configuration_.rotors.size() * 2);
         // Return 0 velocities on all rotors, until the first command is received.
@@ -346,7 +345,7 @@ namespace neural_adaptive_controller
         in_vec.clear();
         out_vec.clear();
 
-        for (int i = 0; i < 24; i++)
+        for (int i = 0; i < 12; i++)
         {
             in_vec.push_back(input(i));
         }
@@ -360,23 +359,23 @@ namespace neural_adaptive_controller
 
         std::cout << output << '\n';
 
-        Eigen::VectorXd rot_speed = Eigen::VectorXd::Zero(8);
+        Eigen::Vector3d output_torque;
 
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < 3; i++)
         {
-            rot_speed(i) = output[0][i].item<float>();
+            output_torque(i) = output[0][i].item<float>();
         }
         // ROS_INFO("CalculateRotorVelocities3");
 
-        Eigen::VectorXd s = Eigen::VectorXd::Zero(6);
-        Eigen::VectorXd v_d = input.block(6, 0, 6, 1);
-        Eigen::VectorXd v_e = input.block(12, 0, 6, 1);
+        Eigen::Vector3d s = Eigen::Vector3d::Zero();
+        Eigen::Vector3d v_d = input.block(3, 0, 3, 1);
+        Eigen::Vector3d v_e = input.block(9, 0, 3, 1);
 
         s = v_d - v_e;
 
-        Eigen::VectorXd Rs = (force_torque_mapping_ * controller_parameters_.global_allocation_matrix_).transpose() * s;
+        Eigen::Vector3d Rs = s;
 
-        Eigen::VectorXd Rs_sgn = Eigen::VectorXd::Zero(8);
+        Eigen::Vector3d Rs_sgn;
         // ROS_INFO("CalculateRotorVelocities4");
 
         double alpha = 10;
@@ -387,40 +386,48 @@ namespace neural_adaptive_controller
         // PRINT_MAT(Rs);
         // PRINT_MAT(Rs_sgn);
 
-        *rotor_velocities = rot_speed;
+        double thrust = -3.0 * acceleration.dot(odometry_.orientation.toRotationMatrix().col(2));
+
+        Eigen::Vector4d angular_thrust;
+        angular_thrust.block<3, 1>(0, 0) = output_torque - Rs - Rs_sgn;
+        angular_thrust(3) = thrust;
+
+        // *rotor_velocities = rot_speed;
         // *rotor_velocities = rot_speed - Rs - Rs_sgn;
-        *rotor_velocities = rotor_velocities->cwiseMax(Eigen::VectorXd::Zero(rotor_velocities->rows()));
+        // *rotor_velocities = rotor_velocities->cwiseMax(Eigen::VectorXd::Zero(rotor_velocities->rows()));
         // *rotor_velocities = rotor_velocities->cwiseSqrt();
+
+        *rotor_velocities = angular_acc_to_rotor_velocities_ * angular_thrust;
+        // PRINT_MAT(angular_acceleration_thrust);
+        *rotor_velocities = rotor_velocities->cwiseMax(Eigen::VectorXd::Zero(rotor_velocities->rows()));
+        *rotor_velocities = rotor_velocities->cwiseSqrt();
     }
 
-    void NeuralAdaptiveController::ComputeVelRate(Eigen::VectorXd *velrate_now,
-                                                  Eigen::VectorXd *velrate_err) const
+    void NeuralAdaptiveController::ComputeVelRate(Eigen::Vector3d *rate_now,
+                                                  Eigen::Vector3d *rate_err) const
     {
-        assert(velrate_now);
-        assert(velrate_err);
+        assert(rate_now);
+        assert(rate_err);
 
         // Transform velocity to world frame.
         const Eigen::Matrix3d R_W_I = odometry_.orientation.toRotationMatrix();
         Eigen::Vector3d velocity_W = R_W_I * odometry_.velocity;
         Eigen::Vector3d vel_err;
         vel_err = velocity_W - command_trajectory_.velocity_W;
-        velrate_now->resize(6);
 
-        *velrate_now << velocity_W, odometry_.angular_velocity;
+        *rate_now << odometry_.angular_velocity;
 
         Eigen::Vector3d rate = odometry_.angular_velocity;
         Eigen::Matrix3d R = odometry_.orientation.toRotationMatrix();
-        Eigen::Vector3d rate_err = command_trajectory_.angular_velocity_W - R.transpose() * rate;
-        velrate_err->resize(6);
-
-        *velrate_err << vel_err, rate_err;
+        *rate_err = command_trajectory_.angular_velocity_W - R.transpose() * rate;
     }
 
-    void NeuralAdaptiveController::ComputePosAtt(Eigen::VectorXd *posatt_now,
-                                                 Eigen::VectorXd *posatt_err)
+    void NeuralAdaptiveController::ComputePosAtt(Eigen::Vector3d *acceleration,
+                                                 Eigen::Vector3d *att_now,
+                                                 Eigen::Vector3d *att_err)
     {
-        assert(posatt_now);
-        assert(posatt_err);
+        assert(att_now);
+        assert(att_err);
 
         Eigen::Vector3d pos_err;
         pos_err = odometry_.position - command_trajectory_.position_W;
@@ -429,8 +436,7 @@ namespace neural_adaptive_controller
         Eigen::Vector3d euler;
         mav_msgs::getEulerAnglesFromQuaternion(odometry_.orientation, &euler);
 
-        posatt_now->resize(6);
-        *posatt_now << command_trajectory_.position_W, euler;
+        *att_now = euler;
         // ROS_INFO("ComputePosAtt1");
         // Get the desired rotation matrix.
         Eigen::Vector3d b1_des;
@@ -439,10 +445,18 @@ namespace neural_adaptive_controller
 
         Eigen::Vector3d e_3(Eigen::Vector3d::UnitZ());
         Eigen::Vector3d position_gain(0.1, 0.1, 0.1);
-        Eigen::Vector3d acceleration = pos_err.cwiseProduct(position_gain) - 9.81 * e_3 - command_trajectory_.acceleration_W;
+        // Eigen::Vector3d acceleration = pos_err.cwiseProduct(position_gain) - 9.81 * e_3 - command_trajectory_.acceleration_W;
 
+        // Transform velocity to world frame.
+        const Eigen::Matrix3d R_W_I = odometry_.orientation.toRotationMatrix();
+        Eigen::Vector3d velocity_W = R_W_I * odometry_.velocity;
+        Eigen::Vector3d velocity_error;
+        velocity_error = velocity_W - command_trajectory_.velocity_W;
+
+        Eigen::Vector3d acc = (pos_err.cwiseProduct(controller_parameters_.position_gain_) + velocity_error.cwiseProduct(controller_parameters_.velocity_gain_)) / 3.0 - vehicle_parameters_.gravity_ * e_3 - command_trajectory_.acceleration_W;
+        *acceleration = acc;
         Eigen::Vector3d b3_des;
-        b3_des = -acceleration / acceleration.norm();
+        b3_des = -acc / acc.norm();
 
         Eigen::Vector3d b2_des;
         b2_des = b3_des.cross(b1_des);
@@ -458,13 +472,12 @@ namespace neural_adaptive_controller
         Eigen::Vector3d angle_error;
         vectorFromSkewMatrix(angle_error_matrix, &angle_error);
         // ROS_INFO("ComputePosAtt2");
-        posatt_err->resize(6);
-        *posatt_err << pos_err, angle_error;
+        *att_err << angle_error;
         // ROS_INFO("ComputePosAtt3");
-        force_torque_mapping_.resize(6, 4);
-        force_torque_mapping_ = Eigen::MatrixXd::Zero(6, 4);
-        force_torque_mapping_.topLeftCorner(3, 1) = -R.col(2);
-        force_torque_mapping_.bottomRightCorner(3, 3) = Eigen::Matrix3d::Identity();
+        // force_torque_mapping_.resize(6, 4);
+        // force_torque_mapping_ = Eigen::MatrixXd::Zero(6, 4);
+        // force_torque_mapping_.topLeftCorner(3, 1) = -R.col(2);
+        // force_torque_mapping_.bottomRightCorner(3, 3) = Eigen::Matrix3d::Identity();
     }
 
 } // namespace neural_adaptive_controller

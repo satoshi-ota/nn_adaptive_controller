@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/WrenchStamped.h>
 #include <mav_msgs/Actuators.h>
 #include <mav_msgs/AttitudeThrust.h>
 #include <mav_msgs/common.h>
@@ -64,11 +65,11 @@ namespace neural_adaptive_controller
         void InitializeParams();
 
         void InitializeParameters();
-        void CalculateRotorVelocities(const Eigen::VectorXd &nn_input, Eigen::VectorXd *rotor_velocities);
-        void CalculateNNInput(const Eigen::VectorXd &x_n,
-                              const Eigen::VectorXd &v_n,
-                              const Eigen::VectorXd &x_e,
-                              const Eigen::VectorXd &v_e,
+        void CalculateRotorVelocities(const Eigen::Vector3d &acceleration, const Eigen::VectorXd &nn_input, Eigen::VectorXd *rotor_velocities);
+        void CalculateNNInput(const Eigen::Vector3d &x_n,
+                              const Eigen::Vector3d &v_n,
+                              const Eigen::Vector3d &x_e,
+                              const Eigen::Vector3d &v_e,
                               Eigen::VectorXd *nn_input);
 
         void SetOdometry(const EigenOdometry &odometry);
@@ -118,8 +119,8 @@ namespace neural_adaptive_controller
         // void ComputeDesiredAngularAcc(const Eigen::Vector3d &acceleration,
         //                               Eigen::Vector3d *angular_acceleration) const;
         // void ComputeDesiredAcceleration(Eigen::Vector3d *acceleration) const;
-        void ComputePosAtt(Eigen::VectorXd *posatt_now, Eigen::VectorXd *posatt_err);
-        void ComputeVelRate(Eigen::VectorXd *velrate_now, Eigen::VectorXd *velrate_err) const;
+        void ComputePosAtt(Eigen::Vector3d *acceleration, Eigen::Vector3d *posatt_now, Eigen::Vector3d *posatt_err);
+        void ComputeVelRate(Eigen::Vector3d *velrate_now, Eigen::Vector3d *velrate_err) const;
 
         void TimedCommandCallback(const ros::TimerEvent &e);
 
