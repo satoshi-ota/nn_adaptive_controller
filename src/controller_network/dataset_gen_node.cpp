@@ -43,7 +43,8 @@ namespace jetrov_control
         // posatt now
         ofs_ << roll << ", " << pitch << ", " << yaw << ", "
              << twist.angular.x << ", " << twist.angular.y << ", " << twist.angular.z << ", "
-             << 0.0 << ", " << 0.0 << ", " << 0.0 << ", "
+             //  << 0.0 << ", " << 0.0 << ", " << 0.0 << ", "<< twist.angular.x << ", " << twist.angular.y << ", " << twist.angular.z << ", "
+             << 0.1 * twist.angular.x << ", " << 0.1 * twist.angular.y << ", " << 0.1 * twist.angular.z << ", "
              << twist.angular.x << ", " << twist.angular.y << ", " << twist.angular.z << ", "
              // output
              << msg_2->wrench.torque.x << ", " << msg_2->wrench.torque.y << ", " << msg_2->wrench.torque.z << std::endl;

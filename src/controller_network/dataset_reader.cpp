@@ -4,6 +4,8 @@
 #include <iostream>
 #include <sstream>
 
+const float RAD_2_DEG = 180 / M_PI;
+
 DatasetReader::DatasetReader(std::ifstream &ifs)
     : ifs_{ifs} {}
 
@@ -15,12 +17,12 @@ std::pair<torch::Tensor, torch::Tensor> DatasetReader::loadFromCSV(std::string l
     in_vec.clear();
     out_vec.clear();
 
-    for (int i = 0; i < 12; i++)
+    for (int i = 0; i < 8; i++)
     {
         in_vec.push_back(std::stof(strvec[i]));
     }
 
-    for (int i = 12; i < 15; i++)
+    for (int i = 8; i < 10; i++)
     {
         out_vec.push_back(std::stof(strvec[i]));
     }
@@ -29,7 +31,7 @@ std::pair<torch::Tensor, torch::Tensor> DatasetReader::loadFromCSV(std::string l
     output_ = torch::from_blob(out_vec.data(), {1, static_cast<unsigned int>(out_vec.size())}).clone();
 
     // std::cout << in_vec << '\n';
-    // std::cout << out_vec << '\n';
+    // std::cout << output_ << '\n';
 
     return {input_, output_};
 }

@@ -7,56 +7,56 @@
 
 #include "neural_adaptive_controller/neural_adaptive_controller.h"
 
-TEST(ArchitectureImpl, forward)
-{
-        torch::manual_seed(1);
-        std::vector<std::ifstream> ifss{};
+// TEST(ArchitectureImpl, forward)
+// {
+//         torch::manual_seed(1);
+//         std::vector<std::ifstream> ifss{};
 
-        auto ds = CustomDataset{ifss}.map(torch::data::transforms::Stack<>());
+//         auto ds = CustomDataset{ifss}.map(torch::data::transforms::Stack<>());
 
-        constexpr int BATCH_SIZE = 32;
+//         constexpr int BATCH_SIZE = 32;
 
-        auto data_loader = torch::data::make_data_loader(
-            std::move(ds),
-            torch::data::DataLoaderOptions().batch_size(BATCH_SIZE).workers(2).drop_last(true));
-}
+//         auto data_loader = torch::data::make_data_loader(
+//             std::move(ds),
+//             torch::data::DataLoaderOptions().batch_size(BATCH_SIZE).workers(2).drop_last(true));
+// }
 
-TEST(CustomDateset, forward)
-{
-        torch::manual_seed(1);
-        std::vector<std::ifstream> ifss{};
+// TEST(CustomDateset, forward)
+// {
+//         torch::manual_seed(1);
+//         std::vector<std::ifstream> ifss{};
 
-        auto ds = CustomDataset{ifss}.map(torch::data::transforms::Stack<>());
+//         auto ds = CustomDataset{ifss}.map(torch::data::transforms::Stack<>());
 
-        constexpr int BATCH_SIZE = 32;
+//         constexpr int BATCH_SIZE = 32;
 
-        auto data_loader = torch::data::make_data_loader(
-            std::move(ds),
-            torch::data::DataLoaderOptions().batch_size(BATCH_SIZE).workers(2).drop_last(true));
+//         auto data_loader = torch::data::make_data_loader(
+//             std::move(ds),
+//             torch::data::DataLoaderOptions().batch_size(BATCH_SIZE).workers(2).drop_last(true));
 
-        for (auto &batch : *data_loader)
-        {
-                auto batch_size = batch.data.size(0);
-                ASSERT_EQ(batch.data.sizes(), (std::vector<std::int64_t>{32, 1, 1, 12}));
-                ASSERT_EQ(BATCH_SIZE, batch_size);
-                for (auto i = 0; i < batch_size; ++i)
-                {
-                        const auto &target = batch.target[i];
-                        const auto &data = batch.data[i];
+//         for (auto &batch : *data_loader)
+//         {
+//                 auto batch_size = batch.data.size(0);
+//                 ASSERT_EQ(batch.data.sizes(), (std::vector<std::int64_t>{32, 1, 1, 12}));
+//                 ASSERT_EQ(BATCH_SIZE, batch_size);
+//                 for (auto i = 0; i < batch_size; ++i)
+//                 {
+//                         const auto &target = batch.target[i];
+//                         const auto &data = batch.data[i];
 
-                        ASSERT_EQ(1, batch.data[i].size(0));
-                        ASSERT_EQ(1, batch.data[i].size(1));
-                        ASSERT_EQ(12, batch.data[i].size(2));
+//                         ASSERT_EQ(1, batch.data[i].size(0));
+//                         ASSERT_EQ(1, batch.data[i].size(1));
+//                         ASSERT_EQ(12, batch.data[i].size(2));
 
-                        ASSERT_EQ(batch.target.sizes(), (std::vector<std::int64_t>{32, 1, 3}));
-                }
-        }
-}
+//                         ASSERT_EQ(batch.target.sizes(), (std::vector<std::int64_t>{32, 1, 3}));
+//                 }
+//         }
+// }
 
 TEST(Training, forward)
 {
-        constexpr double LEARNING_RATE{0.000005};
-        int kNumberOfEpochs = 5;
+        constexpr double LEARNING_RATE{0.001};
+        int kNumberOfEpochs = 10;
 
         EXPECT_TRUE(torch::cuda::is_available());
         torch::DeviceType device_type{};
@@ -78,14 +78,16 @@ TEST(Training, forward)
         torch::optim::Adam optimizer{
             model->parameters(),
             torch::optim::AdamOptions(LEARNING_RATE)};
+        // torch::optim::SGD optimizer(
+        //     model->parameters(), torch::optim::SGDOptions(0.00001).momentum(0.5));
 
         torch::manual_seed(1);
         std::vector<std::ifstream> ifss{};
 
-        // auto ds = CustomDataset{ifss}.map(torch::data::transforms::Stack<>());
-        auto ds = CustomDataset{ifss}.map(torch::data::transforms::Normalize<>(0.0, 0.0001)).map(torch::data::transforms::Stack<>());
+        auto ds = CustomDataset{ifss}.map(torch::data::transforms::Stack<>());
+        // auto ds = CustomDataset{ifss}.map(torch::data::transforms::Normalize<>(0.0, 0.0001)).map(torch::data::transforms::Stack<>());
 
-        constexpr int BATCH_SIZE = 256;
+        constexpr int BATCH_SIZE = 512;
 
         auto data_loader = torch::data::make_data_loader(
             std::move(ds),
@@ -96,7 +98,7 @@ TEST(Training, forward)
                 for (auto &batch : *data_loader)
                 {
                         auto batch_size = batch.data.size(0);
-                        ASSERT_EQ(batch.data.sizes(), (std::vector<std::int64_t>{BATCH_SIZE, 1, 1, 12}));
+                        ASSERT_EQ(batch.data.sizes(), (std::vector<std::int64_t>{BATCH_SIZE, 1, 1, 8}));
                         ASSERT_EQ(BATCH_SIZE, batch_size);
 
                         auto data = batch.data.to(device);
@@ -119,8 +121,10 @@ TEST(Training, forward)
                 }
         }
 
-        torch::save(model, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/model.pt");
-        torch::save(optimizer, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/opt.pt");
+        model->showInfo();
+
+        // torch::save(model, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/model.pt");
+        // torch::save(optimizer, "/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/opt.pt");
 }
 
 // TEST(Test, outputLayer)
@@ -160,7 +164,7 @@ TEST(Training, forward)
 //         auto ds = CustomDataset{ifss}.map(torch::data::transforms::Stack<>());
 //         // auto ds = CustomDataset{ifss}.map(torch::data::transforms::Normalize<>(0, 0.01)).map(torch::data::transforms::Stack<>());
 
-//         constexpr int BATCH_SIZE = 32;
+//         constexpr int BATCH_SIZE = 4;
 
 //         auto data_loader = torch::data::make_data_loader(
 //             std::move(ds),
@@ -179,6 +183,7 @@ TEST(Training, forward)
 
 //                         auto output = model->forward(data);
 
+//                         // std::cout << targets << '\n';
 //                         // std::cout << output << '\n';
 
 //                         auto loss = torch::mse_loss(output, targets);
