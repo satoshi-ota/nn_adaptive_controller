@@ -22,6 +22,11 @@
 #include <controller_network/custom_dataset.h>
 
 #include "neural_adaptive_controller/common.h"
+
+#include <controller_network/matplotlibcpp.h>
+
+namespace plt = matplotlibcpp;
+
 // #include "neural_adaptive_controller/parameters.h"
 // #include <lee_controller/lee_controller_co_trans.h>
 // using namespace rotors_control;
@@ -113,14 +118,15 @@ namespace neural_adaptive_controller
         Eigen::MatrixXd allocate_rotor_velocities_;
         Eigen::MatrixXd force_torque_mapping_;
 
+        Eigen::MatrixXd W_;
+
         mav_msgs::EigenTrajectoryPoint command_trajectory_;
         EigenOdometry odometry_;
 
-        // void ComputeDesiredAngularAcc(const Eigen::Vector3d &acceleration,
-        //                               Eigen::Vector3d *angular_acceleration) const;
-        // void ComputeDesiredAcceleration(Eigen::Vector3d *acceleration) const;
-        void ComputePosAtt(Eigen::Vector3d *acceleration, Eigen::Vector3d *posatt_now, Eigen::Vector3d *posatt_err);
-        void ComputeVelRate(Eigen::Vector3d *velrate_now, Eigen::Vector3d *velrate_err) const;
+        std::vector<float> pitch_, pitch_err_, rate_y_, rate_err_, torque_s_, torque_y_;
+
+        void ComputePosAtt(Eigen::Vector3d *acceleration, Eigen::Vector3d *posatt_now, Eigen::Vector3d *posatt_err, Eigen::Vector3d *rate_now,
+                           Eigen::Vector3d *rate_err);
 
         void TimedCommandCallback(const ros::TimerEvent &e);
 

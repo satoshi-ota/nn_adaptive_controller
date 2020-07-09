@@ -41,23 +41,50 @@ public:
         return mode_;
     }
 
+    void plotLoss(float& loss)
+    {
+        loss_.push_back(loss);
+    }
+
     void showInfo()
     {
-        // Set the size of output image to 1200x780 pixels
         plt::figure_size(1200, 780);
-        // Plot line from given x and y data. Color is selected automatically.
+
+        plt::subplot(3, 1, 1);
+        plt::plot(loss_);
+        plt::named_plot("Loss", loss_);
+        // plt::xlim(0, 500);
+
+        plt::subplot(3, 1, 2);
+        plt::plot(c1);
+        plt::plot(c2);
+        plt::plot(c3);
+        plt::plot(c4);
+        plt::plot(c5);
+        plt::plot(c6);
+        plt::plot(c7);
+        plt::plot(c8);
+        plt::plot(c9);
+        plt::plot(c10);
+        plt::named_plot("Layer1:wight", c1);
+        // plt::xlim(0, 500);
+
+        plt::subplot(3, 1, 3);
         plt::plot(w1);
-        // Plot a red dashed line from given x and y data.
-        // plt::plot(x, w, "r--");
-        // Plot a line whose name will show up as "log(x)" in the legend.
+        plt::plot(w2);
+        plt::plot(w3);
+        plt::plot(w4);
+        plt::plot(w5);
+        plt::plot(w6);
+        plt::plot(w7);
+        plt::plot(w8);
+        plt::plot(w9);
+        plt::plot(w10);
         plt::named_plot("Layer:wight", w1);
-        // Set x-axis to interval [0,1000000]
-        plt::xlim(0, 1000);
-        // Add graph title
+        // plt::xlim(0, 500);
+
         plt::title("weight train");
-        // Enable legend.
         plt::legend();
-        // Save the image (file format is determined by the extension)
         plt::save("/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/basic.png");
     }
 
@@ -77,7 +104,9 @@ private:
 
     // torch::nn::Dropout dropout;
 
-    std::vector<float> w1, y, z;
+    std::vector<float> loss_;
+    std::vector<float> c1, c2, c3,c4,c5,c6,c7,c8,c9,c10;
+    std::vector<float> w1, w2, w3,w4,w5,w6,w7,w8,w9,w10;
     Mode mode_;
 };
 

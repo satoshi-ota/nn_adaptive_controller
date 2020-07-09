@@ -55,7 +55,7 @@
 
 TEST(Training, forward)
 {
-        constexpr double LEARNING_RATE{0.001};
+        constexpr double LEARNING_RATE{0.3};
         int kNumberOfEpochs = 10;
 
         EXPECT_TRUE(torch::cuda::is_available());
@@ -87,7 +87,7 @@ TEST(Training, forward)
         auto ds = CustomDataset{ifss}.map(torch::data::transforms::Stack<>());
         // auto ds = CustomDataset{ifss}.map(torch::data::transforms::Normalize<>(0.0, 0.0001)).map(torch::data::transforms::Stack<>());
 
-        constexpr int BATCH_SIZE = 512;
+        constexpr int BATCH_SIZE = 16;
 
         auto data_loader = torch::data::make_data_loader(
             std::move(ds),
@@ -114,10 +114,12 @@ TEST(Training, forward)
                         auto loss = torch::mse_loss(output, targets);
                         float loss_val = loss.item<float>();
 
+                        model->plotLoss(loss_val);
+
                         loss.backward();
                         optimizer.step();
 
-                        std::cout << "Loss: " << loss_val << std::endl;
+                        // std::cout << "Loss: " << loss_val << std::endl;
                 }
         }
 
