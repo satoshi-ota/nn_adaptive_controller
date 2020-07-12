@@ -169,7 +169,7 @@ namespace neural_adaptive_controller
         // allocate_rotor_velocities_ = Eigen::MatrixXd::Zero(6, 8);
         // allocate_rotor_velocities_.topLeftCorner(4, 8) = controller_parameters_.global_allocation_matrix_;
 
-        W_ = 0.0001 * Eigen::MatrixXd::Random(54, 3);
+        W_ = 0.01 * Eigen::MatrixXd::Random(54, 3);
         pitch_.clear();
         pitch_err_.clear();
         rate_y_.clear();
@@ -327,7 +327,7 @@ namespace neural_adaptive_controller
         // R << 7.5, 1, 0,
         //     1, 11, 0,
         //     0, 0.75, 1;
-        R << 5.0, 0, 0,
+        R << 2.0, 0, 0,
             0, 5.0, 0,
             0, 0, 0;
 
@@ -409,12 +409,10 @@ namespace neural_adaptive_controller
         W_ += -0.0000001 * P * Phi * s.transpose();
         // PRINT_MAT(W_);
 
-        double thrust = -3.0 * acceleration.dot(odometry_.orientation.toRotationMatrix().col(2));
+        double thrust = -2.5 * acceleration.dot(odometry_.orientation.toRotationMatrix().col(2));
 
         Eigen::Vector4d angular_thrust;
-        // angular_thrust.block<3, 1>(0, 0) = - 0.01*Rs - 0.01*Rs_sgn;
         angular_thrust.block<3, 1>(0, 0) = output_torque - Rs - Rs_sgn;
-        // angular_thrust.block<3, 1>(0, 0) = Eigen::Vector3d::Zero();
         angular_thrust(3) = thrust;
 
         torque_s_.push_back(Rs(1));
@@ -453,7 +451,7 @@ namespace neural_adaptive_controller
 
         Eigen::Vector3d e_3(Eigen::Vector3d::UnitZ());
 
-        *acceleration = (position_error.cwiseProduct(controller_parameters_.position_gain_) + velocity_error.cwiseProduct(controller_parameters_.velocity_gain_)) / 3.0 - vehicle_parameters_.gravity_ * e_3 - command_trajectory_.acceleration_W;
+        *acceleration = (position_error.cwiseProduct(controller_parameters_.position_gain_) + velocity_error.cwiseProduct(controller_parameters_.velocity_gain_)) / 2.5 - vehicle_parameters_.gravity_ * e_3 - command_trajectory_.acceleration_W;
         Eigen::Vector3d b3_des;
         b3_des = -*acceleration / acceleration->norm();
 
