@@ -17,21 +17,12 @@
 #include <ros/ros.h>
 #include <trajectory_msgs/MultiDOFJointTrajectory.h>
 
-#include <torch/torch.h>
-#include <controller_network/architecture.h>
-#include <controller_network/custom_dataset.h>
-
 #include "neural_adaptive_controller/common.h"
 
 #include <controller_network/matplotlibcpp.h>
 
 namespace plt = matplotlibcpp;
 
-// #include "neural_adaptive_controller/parameters.h"
-// #include <lee_controller/lee_controller_co_trans.h>
-// using namespace rotors_control;
-// namespace rotors_control
-// {
 namespace neural_adaptive_controller
 {
     // Default values for the lee position controller and the Asctec Firefly.
@@ -70,12 +61,7 @@ namespace neural_adaptive_controller
         void InitializeParams();
 
         void InitializeParameters();
-        void CalculateRotorVelocities(const Eigen::Vector3d &acceleration, const Eigen::VectorXd &nn_input, Eigen::VectorXd *rotor_velocities);
-        void CalculateNNInput(const Eigen::Vector3d &x_n,
-                              const Eigen::Vector3d &v_n,
-                              const Eigen::Vector3d &x_e,
-                              const Eigen::Vector3d &v_e,
-                              Eigen::VectorXd *nn_input);
+        void CalculateRotorVelocities(Eigen::VectorXd *rotor_velocities);
 
         void SetOdometry(const EigenOdometry &odometry);
         void SetTrajectoryPoint(const mav_msgs::EigenTrajectoryPoint &command_trajectory);
@@ -88,10 +74,6 @@ namespace neural_adaptive_controller
     private:
         ros::NodeHandle nh_;
         ros::NodeHandle private_nh_;
-
-        Architecture model_;
-
-        // LeeControllerCoTrans lee_controller_co_trans_;
 
         std::string namespace_;
 
@@ -118,15 +100,25 @@ namespace neural_adaptive_controller
         Eigen::MatrixXd allocate_rotor_velocities_;
         Eigen::MatrixXd force_torque_mapping_;
 
-        Eigen::MatrixXd W_;
+        Eigen::Vector3d angular_velocity_pred_;
+        Eigen::Vector3d last_LPF_;
+        Eigen::Vector3d last_angle_error_;
 
         mav_msgs::EigenTrajectoryPoint command_trajectory_;
         EigenOdometry odometry_;
 
-        std::vector<float> pitch_, pitch_err_, rate_y_, rate_err_, torque_s_, torque_y_;
+        std::vector<float> pitch_command_, roll_command_;
+        std::vector<float> pitch_, roll_;
+        std::vector<float> pitch_ref_, roll_ref_;
+        std::vector<float> torque_roll_, torque_pitch_;
+        std::vector<float> angular_acceleration_roll_, angular_acceleration_pitch_;
+        std::vector<float> sigma_roll_, sigma_pitch_;
 
-        void ComputePosAtt(Eigen::Vector3d *acceleration, Eigen::Vector3d *posatt_now, Eigen::Vector3d *posatt_err, Eigen::Vector3d *rate_now,
-                           Eigen::Vector3d *rate_err);
+        void adaptation(const Eigen::Vector3d &angle_error, Eigen::Vector3d *sigma);
+
+        Eigen::Vector3d lowPassFilter(const Eigen::Vector3d &raw);
+
+        void predReferenceOutput(const Eigen::Vector3d &input_torque, Eigen::Vector3d *angular_velocity_pred);
 
         void TimedCommandCallback(const ros::TimerEvent &e);
 
@@ -137,6 +129,10 @@ namespace neural_adaptive_controller
             const geometry_msgs::PoseStampedConstPtr &pose_msg);
 
         void OdometryCallback(const nav_msgs::OdometryConstPtr &odometry_msg);
+
+        void ComputeDesiredAngularAcc(const Eigen::Vector3d &acceleration,
+                                      Eigen::Vector3d *angular_acceleration);
+        void ComputeDesiredAcceleration(Eigen::Vector3d *acceleration) const;
     };
 } // namespace neural_adaptive_controller
 // } // namespace rotors_control
