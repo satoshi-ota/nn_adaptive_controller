@@ -55,6 +55,7 @@ namespace neural_adaptive_controller
         // plt::named_plot("torque_roll", torque_roll_);
         // plt::named_plot("angular_acceleration_roll", angular_acceleration_roll_);
         plt::named_plot("sigma_roll", sigma_roll_);
+        plt::named_plot("error_roll", error_roll_);
         plt::title("roll");
         plt::legend();
 
@@ -62,9 +63,10 @@ namespace neural_adaptive_controller
         plt::named_plot("pitch_command", pitch_command_);
         plt::named_plot("pitch", pitch_);
         plt::named_plot("pitch_reference", pitch_ref_);
-        // plt::named_plot("torque_pitch", torque_pitch_);
-        // plt::named_plot("angular_acceleration_pitch", angular_acceleration_pitch_);
+        plt::named_plot("torque_pitch", torque_pitch_);
+        plt::named_plot("angular_acceleration_pitch", angular_acceleration_pitch_);
         plt::named_plot("sigma_pitch", sigma_pitch_);
+        plt::named_plot("error_pitch", error_pitch_);
         plt::title("pitch");
         plt::legend();
 
@@ -157,6 +159,8 @@ namespace neural_adaptive_controller
         angular_acceleration_pitch_.clear();
         sigma_roll_.clear();
         sigma_pitch_.clear();
+        error_roll_.clear();
+        error_pitch_.clear();
     }
 
     void NeuralAdaptiveController::CommandPoseCallback(
@@ -291,16 +295,11 @@ namespace neural_adaptive_controller
             return;
         }
 
-        // Adaptation
-        Eigen::Matrix3d R = odometry_.orientation.toRotationMatrix();
         Eigen::Vector3d angular_rate_error = angular_velocity_pred_ - odometry_.angular_velocity;
-        PRINT_MAT(angular_velocity_pred_);
 
         Eigen::Vector3d sigma;
         adaptation(angular_rate_error, &sigma);
         sigma = lowPassFilter(sigma);
-
-        PRINT_MAT(sigma);
 
         Eigen::Vector3d acceleration;
         ComputeDesiredAcceleration(&acceleration);
@@ -327,7 +326,10 @@ namespace neural_adaptive_controller
         sigma_roll_.push_back(sigma(0));
         sigma_pitch_.push_back(sigma(1));
 
-        predReferenceOutput(angular_thrust.block<3, 1>(0, 0), &angular_velocity_pred_);
+        error_roll_.push_back(angular_rate_error(0));
+        error_pitch_.push_back(angular_rate_error(1));
+
+        predReferenceOutput(angular_acceleration + sigma, &angular_velocity_pred_);
     }
 
     void NeuralAdaptiveController::ComputeDesiredAcceleration(Eigen::Vector3d *acceleration) const
@@ -392,11 +394,13 @@ namespace neural_adaptive_controller
     void NeuralAdaptiveController::adaptation(const Eigen::Vector3d &angle_error, Eigen::Vector3d *sigma)
     {
         double dt = 0.1;
-        double gamma = 1.0;
+        double gamma = 50.0;
 
-        // *sigma = (Eigen::Matrix3d::Identity() - gamma * Eigen::Matrix3d::Identity() * dt) * angle_error;
-        *sigma = -gamma * (angle_error - last_angle_error_) / dt;
-        last_angle_error_ = angle_error;
+        last_angle_error_ += angle_error * dt;
+        last_angle_error_ = last_angle_error_.cwiseMax(-1.0 * kDefaultSigmaAbs);
+        last_angle_error_ = last_angle_error_.cwiseMin(kDefaultSigmaAbs);
+
+        *sigma = -gamma * last_angle_error_;
     }
 
     Eigen::Vector3d NeuralAdaptiveController::lowPassFilter(const Eigen::Vector3d &raw)
@@ -417,14 +421,13 @@ namespace neural_adaptive_controller
         roll_.push_back(odometry_.angular_velocity(0));
         pitch_.push_back(odometry_.angular_velocity(1));
 
-        // *angular_velocity_pred = odometry_.angular_velocity + vehicle_parameters_.inertia_.inverse() * (u_torque + sigma - odometry_.angular_velocity.cross(vehicle_parameters_.inertia_ * odometry_.angular_velocity)) * dt;
         Eigen::Matrix3d A_ref;
-        A_ref << -5.0, 0.0, 0.0,
-            0.0, -5.0, 0.0,
-            0.0, 0.0, -5.0;
+        A_ref << -9.0, 0.0, 0.0,
+            0.0, -9.0, 0.0,
+            0.0, 0.0, -9.0;
 
         A_ref = Eigen::Matrix3d::Identity() + A_ref * dt;
-        *angular_velocity_pred = A_ref * odometry_.angular_velocity + (input_torque)*dt;
+        *angular_velocity_pred = A_ref * odometry_.angular_velocity + input_torque * dt;
 
         roll_ref_.push_back(angular_velocity_pred->x());
         pitch_ref_.push_back(angular_velocity_pred->y());

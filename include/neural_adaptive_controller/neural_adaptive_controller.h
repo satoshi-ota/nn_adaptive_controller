@@ -31,6 +31,8 @@ namespace neural_adaptive_controller
     static const Eigen::Vector3d kDefaultAttitudeGain = Eigen::Vector3d(3, 3, 0.035);
     static const Eigen::Vector3d kDefaultAngularRateGain = Eigen::Vector3d(0.52, 0.52, 0.025);
 
+    static const Eigen::Vector3d kDefaultSigmaAbs = Eigen::Vector3d(0.0, 0.30, 0.0);
+
     class NeuralAdaptiveControllerParameters
     {
     public:
@@ -113,6 +115,7 @@ namespace neural_adaptive_controller
         std::vector<float> torque_roll_, torque_pitch_;
         std::vector<float> angular_acceleration_roll_, angular_acceleration_pitch_;
         std::vector<float> sigma_roll_, sigma_pitch_;
+        std::vector<float> error_roll_, error_pitch_;
 
         void adaptation(const Eigen::Vector3d &angle_error, Eigen::Vector3d *sigma);
 
