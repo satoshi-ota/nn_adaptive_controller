@@ -31,7 +31,7 @@ namespace neural_adaptive_controller
     static const Eigen::Vector3d kDefaultAttitudeGain = Eigen::Vector3d(3, 3, 0.035);
     static const Eigen::Vector3d kDefaultAngularRateGain = Eigen::Vector3d(0.52, 0.52, 0.025);
 
-    static const Eigen::Vector3d kDefaultSigmaAbs = Eigen::Vector3d(0.0, 0.30, 0.0);
+    static const Eigen::Vector3d kDefaultSigmaAbs = Eigen::Vector3d(0.10, 0.30, 0.0);
 
     class NeuralAdaptiveControllerParameters
     {
@@ -104,7 +104,7 @@ namespace neural_adaptive_controller
 
         Eigen::Vector3d angular_velocity_pred_;
         Eigen::Vector3d last_LPF_;
-        Eigen::Vector3d last_angle_error_, last_angle_ref_;
+        Eigen::Vector3d last_angle_error_;
         Eigen::Matrix3d R_ref_;
 
         mav_msgs::EigenTrajectoryPoint command_trajectory_;
@@ -113,7 +113,7 @@ namespace neural_adaptive_controller
         std::vector<float> pitch_command_, roll_command_;
         std::vector<float> pitch_, roll_;
         std::vector<float> pitch_ref_, roll_ref_;
-        std::vector<float> torque_roll_, torque_pitch_;
+        std::vector<float> torque_x_, torque_y_;
         std::vector<float> angular_acceleration_roll_, angular_acceleration_pitch_;
         std::vector<float> sigma_roll_, sigma_pitch_;
         std::vector<float> error_roll_, error_pitch_;
