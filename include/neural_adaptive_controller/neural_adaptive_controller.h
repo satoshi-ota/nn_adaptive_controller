@@ -102,10 +102,10 @@ namespace neural_adaptive_controller
         Eigen::MatrixXd allocate_rotor_velocities_;
         Eigen::MatrixXd force_torque_mapping_;
 
-        Eigen::Vector3d angular_velocity_pred_;
         Eigen::Vector3d last_LPF_;
         Eigen::Vector3d last_angle_error_;
-        Eigen::Matrix3d R_ref_;
+        Eigen::Vector3d angle_ref_;
+        Eigen::Vector3d angular_rate_ref_;
 
         mav_msgs::EigenTrajectoryPoint command_trajectory_;
         EigenOdometry odometry_;
@@ -118,11 +118,11 @@ namespace neural_adaptive_controller
         std::vector<float> sigma_roll_, sigma_pitch_;
         std::vector<float> error_roll_, error_pitch_;
 
-        void adaptation(const Eigen::Vector3d &angle_error, Eigen::Vector3d *sigma);
+        void adaptation(const Eigen::Vector3d &angular_rate_error, Eigen::Vector3d *angle_sig);
 
         Eigen::Vector3d lowPassFilter(const Eigen::Vector3d &raw);
 
-        void predReferenceOutput(const Eigen::Vector3d &input, const Eigen::Matrix3d &R_des, Eigen::Matrix3d *R_ref);
+        void predReferenceOutput(const Eigen::Vector3d &angle_in, Eigen::Vector3d *angular_rate_ref);
 
         void TimedCommandCallback(const ros::TimerEvent &e);
 
@@ -134,9 +134,11 @@ namespace neural_adaptive_controller
 
         void OdometryCallback(const nav_msgs::OdometryConstPtr &odometry_msg);
 
-        void ComputeDesiredAngularAcc(const Eigen::Vector3d &acceleration,
-                                      Eigen::Matrix3d *R_des,
+        void ComputeDesiredAngularAcc(const Eigen::Vector3d &angle_des,
                                       Eigen::Vector3d *angular_acceleration);
+
+        void ComputeDesiredAngle(const Eigen::Vector3d &acceleration, Eigen::Vector3d *angle_des);
+
         void ComputeDesiredAcceleration(Eigen::Vector3d *acceleration) const;
     };
 } // namespace neural_adaptive_controller
