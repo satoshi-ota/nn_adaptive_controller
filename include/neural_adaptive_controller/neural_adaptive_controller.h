@@ -92,9 +92,6 @@ namespace neural_adaptive_controller
         std::deque<ros::Duration> command_waiting_times_;
         ros::Timer command_timer_;
 
-        ros::Time dt_timer_;
-        double dt_;
-
         bool initialized_params_;
         bool controller_active_;
 
@@ -105,10 +102,17 @@ namespace neural_adaptive_controller
         Eigen::MatrixXd allocate_rotor_velocities_;
         Eigen::MatrixXd force_torque_mapping_;
 
-        Eigen::Vector3d last_LPF_;
+        Eigen::Vector3d last_position_LPF_;
+        Eigen::Vector3d last_position_error_;
+        Eigen::Vector3d velocity_ref_;
+
+        Eigen::Vector3d last_angular_LPF_;
         Eigen::Vector3d last_angle_error_;
         Eigen::Vector3d angle_ref_;
         Eigen::Vector3d angular_rate_ref_;
+
+        ros::Time dt_timer_;
+        double dt_;
 
         mav_msgs::EigenTrajectoryPoint command_trajectory_;
         EigenOdometry odometry_;
@@ -121,10 +125,13 @@ namespace neural_adaptive_controller
         std::vector<float> sigma_roll_, sigma_pitch_;
         std::vector<float> error_roll_, error_pitch_;
 
-        void adaptation(const Eigen::Vector3d &angular_rate_error, Eigen::Vector3d *angle_sig);
+        void positionAdaptation(const Eigen::Vector3d &position_error, Eigen::Vector3d *position_sig);
+        void angularAdaptation(const Eigen::Vector3d &angular_rate_error, Eigen::Vector3d *angle_sig);
 
-        Eigen::Vector3d lowPassFilter(const Eigen::Vector3d &raw);
+        Eigen::Vector3d angularLowPassFilter(const Eigen::Vector3d &raw);
+        Eigen::Vector3d positionLowPassFilter(const Eigen::Vector3d &raw);
 
+        void positionReferenceOutput(const Eigen::Vector3d &position_in, Eigen::Vector3d *position_ref);
         void predReferenceOutput(const Eigen::Vector3d &angle_in, Eigen::Vector3d *angular_rate_ref);
 
         void TimedCommandCallback(const ros::TimerEvent &e);
@@ -142,7 +149,7 @@ namespace neural_adaptive_controller
 
         void ComputeDesiredAngle(const Eigen::Vector3d &acceleration, Eigen::Vector3d *angle_des);
 
-        void ComputeDesiredAcceleration(Eigen::Vector3d *acceleration) const;
+        void ComputeDesiredAcceleration(const Eigen::Vector3d &position_in, Eigen::Vector3d *acceleration) const;
     };
 } // namespace neural_adaptive_controller
 
