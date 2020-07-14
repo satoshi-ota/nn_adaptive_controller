@@ -14,10 +14,14 @@ namespace neural_adaptive_controller
         const ros::NodeHandle &nh, const ros::NodeHandle &private_nh)
         : nh_(nh),
           private_nh_(private_nh),
-          last_LPF_(Eigen::Vector3d::Zero()),
+          last_position_LPF_(Eigen::Vector3d::Zero()),
+          last_position_error_(Eigen::Vector3d::Zero()),
+          velocity_ref_(Eigen::Vector3d::Zero()),
+          last_angular_LPF_(Eigen::Vector3d::Zero()),
           last_angle_error_(Eigen::Vector3d::Zero()),
           angle_ref_(Eigen::Vector3d::Zero()),
           angular_rate_ref_(Eigen::Vector3d::Zero()),
+
           dt_timer_(ros::Time::now()),
           dt_(0.0)
     {
@@ -307,12 +311,21 @@ namespace neural_adaptive_controller
         Eigen::Vector3d angular_rate_error = angular_rate_ref_ - odometry_.angular_velocity;
 
         Eigen::Vector3d angle_sig, angle_sig_filtered;
-        adaptation(angular_rate_error, &angle_sig);
+        angularAdaptation(angular_rate_error, &angle_sig);
+        angle_sig_filtered = angularLowPassFilter(angle_sig);
 
-        angle_sig_filtered = lowPassFilter(angle_sig);
+        const Eigen::Matrix3d R_W_I = odometry_.orientation.toRotationMatrix();
+        Eigen::Vector3d velocity_W = R_W_I * odometry_.velocity;
+        Eigen::Vector3d velocity_error = velocity_ref_ - velocity_W;
+
+        Eigen::Vector3d position_sig, position_sig_filtered;
+        positionAdaptation(velocity_error, &position_sig);
+        position_sig_filtered = positionLowPassFilter(position_sig);
+
+        Eigen::Vector3d position_in = command_trajectory_.position_W - position_sig_filtered;
 
         Eigen::Vector3d acceleration;
-        ComputeDesiredAcceleration(&acceleration);
+        ComputeDesiredAcceleration(position_in, &acceleration);
 
         Eigen::Vector3d angle_des;
         ComputeDesiredAngle(acceleration, &angle_des);
@@ -339,15 +352,16 @@ namespace neural_adaptive_controller
         roll_command_.push_back(angle_des(0));
         pitch_command_.push_back(angle_des(1));
 
+        positionReferenceOutput(position_in + position_sig, &velocity_ref_);
         predReferenceOutput(angle_in + angle_sig, &angular_rate_ref_);
     }
 
-    void NeuralAdaptiveController::ComputeDesiredAcceleration(Eigen::Vector3d *acceleration) const
+    void NeuralAdaptiveController::ComputeDesiredAcceleration(const Eigen::Vector3d &position_in, Eigen::Vector3d *acceleration) const
     {
         assert(acceleration);
 
         Eigen::Vector3d position_error;
-        position_error = odometry_.position - command_trajectory_.position_W;
+        position_error = odometry_.position - position_in;
 
         // Transform velocity to world frame.
         const Eigen::Matrix3d R_W_I = odometry_.orientation.toRotationMatrix();
@@ -406,9 +420,24 @@ namespace neural_adaptive_controller
         *angular_acceleration = -1 * angle_error.cwiseProduct(normalized_attitude_gain_) - angular_rate_error.cwiseProduct(normalized_angular_rate_gain_) + odometry_.angular_velocity.cross(odometry_.angular_velocity);
     }
 
-    void NeuralAdaptiveController::adaptation(const Eigen::Vector3d &angular_rate_error, Eigen::Vector3d *angle_sig)
+    void NeuralAdaptiveController::positionAdaptation(const Eigen::Vector3d &position_error, Eigen::Vector3d *position_sig)
     {
+        assert(position_sig);
+
         double gamma = 100.0;
+
+        last_position_error_(0) = 0.0;
+        last_position_error_(1) = 0.0;
+        last_position_error_(2) += position_error(2) * dt_;
+
+        *position_sig = -gamma * last_position_error_;
+    }
+
+    void NeuralAdaptiveController::angularAdaptation(const Eigen::Vector3d &angular_rate_error, Eigen::Vector3d *angle_sig)
+    {
+        assert(angle_sig);
+
+        double gamma = 10.0;
 
         last_angle_error_ += angular_rate_error * dt_;
         last_angle_error_ = last_angle_error_.cwiseMax(-1.0 * kDefaultSigmaAbs);
@@ -417,13 +446,34 @@ namespace neural_adaptive_controller
         *angle_sig = -gamma * last_angle_error_;
     }
 
-    Eigen::Vector3d NeuralAdaptiveController::lowPassFilter(const Eigen::Vector3d &raw)
+    Eigen::Vector3d NeuralAdaptiveController::positionLowPassFilter(const Eigen::Vector3d &raw)
     {
-        double c = 0.1;
-        Eigen::Vector3d LPF = (1 - c * dt_) * last_LPF_ + c * dt_ * raw;
-        last_LPF_ = LPF;
+        double c = 1.0;
+        Eigen::Vector3d LPF = (1 - c * dt_) * last_position_LPF_ + c * dt_ * raw;
+        last_position_LPF_ = LPF;
 
         return LPF;
+    }
+
+    Eigen::Vector3d NeuralAdaptiveController::angularLowPassFilter(const Eigen::Vector3d &raw)
+    {
+        double c = 1.0;
+        Eigen::Vector3d LPF = (1 - c * dt_) * last_angular_LPF_ + c * dt_ * raw;
+        last_angular_LPF_ = LPF;
+
+        return LPF;
+    }
+
+    void NeuralAdaptiveController::positionReferenceOutput(const Eigen::Vector3d &position_in, Eigen::Vector3d *velocity_ref)
+    {
+        assert(velocity_ref);
+
+        Eigen::Matrix3d A_ref;
+        A_ref << 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0,
+            0.0, 0.0, -1.0;
+
+        *velocity_ref = A_ref * odometry_.position + position_in;
     }
 
     void NeuralAdaptiveController::predReferenceOutput(const Eigen::Vector3d &angle_in, Eigen::Vector3d *angular_rate_ref)
