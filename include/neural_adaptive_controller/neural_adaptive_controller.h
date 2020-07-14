@@ -4,6 +4,7 @@
 #include <boost/bind.hpp>
 #include <Eigen/Eigen>
 #include <stdio.h>
+#include <fstream>
 
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/WrenchStamped.h>
@@ -30,7 +31,6 @@ namespace neural_adaptive_controller
     static const Eigen::Vector3d kDefaultVelocityGain = Eigen::Vector3d(4.7, 4.7, 4.7);
     static const Eigen::Vector3d kDefaultAttitudeGain = Eigen::Vector3d(3, 3, 0.035);
     static const Eigen::Vector3d kDefaultAngularRateGain = Eigen::Vector3d(0.52, 0.52, 0.025);
-
     static const Eigen::Vector3d kDefaultSigmaAbs = Eigen::Vector3d(0.10, 0.30, 0.0);
 
     class NeuralAdaptiveControllerParameters
@@ -78,8 +78,8 @@ namespace neural_adaptive_controller
         ros::NodeHandle private_nh_;
 
         std::string namespace_;
+        std::ofstream ofs_;
 
-        // subscribers
         ros::Subscriber cmd_trajectory_sub_;
         ros::Subscriber cmd_multi_dof_joint_trajectory_sub_;
         ros::Subscriber cmd_pose_sub_;
@@ -91,6 +91,9 @@ namespace neural_adaptive_controller
         mav_msgs::EigenTrajectoryPointDeque commands_;
         std::deque<ros::Duration> command_waiting_times_;
         ros::Timer command_timer_;
+
+        ros::Time dt_timer_;
+        double dt_;
 
         bool initialized_params_;
         bool controller_active_;
@@ -142,6 +145,5 @@ namespace neural_adaptive_controller
         void ComputeDesiredAcceleration(Eigen::Vector3d *acceleration) const;
     };
 } // namespace neural_adaptive_controller
-// } // namespace rotors_control
 
 #endif // NEURAL_ADAPTIVE_CONTROLLER_H

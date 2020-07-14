@@ -3,13 +3,10 @@
 #include "neural_adaptive_controller/parameters_ros.h"
 #include "neural_adaptive_controller/neural_adaptive_controller.h"
 
-// #include "rotors_control/parameters_ros.h"
 #define PRINT_MAT(X) std::cout << #X << ":\n"    \
                                << X << std::endl \
                                << std::endl
 
-// namespace rotors_control
-// {
 namespace neural_adaptive_controller
 {
 
@@ -20,7 +17,9 @@ namespace neural_adaptive_controller
           last_LPF_(Eigen::Vector3d::Zero()),
           last_angle_error_(Eigen::Vector3d::Zero()),
           angle_ref_(Eigen::Vector3d::Zero()),
-          angular_rate_ref_(Eigen::Vector3d::Zero())
+          angular_rate_ref_(Eigen::Vector3d::Zero()),
+          dt_timer_(ros::Time::now()),
+          dt_(0.0)
     {
         InitializeParams();
 
@@ -32,8 +31,7 @@ namespace neural_adaptive_controller
             "/pelican/command/trajectory", 1,
             &NeuralAdaptiveController::MultiDofJointTrajectoryCallback, this);
 
-        odometry_sub_ = nh_.subscribe("pelican/payload/odom", 1,
-                                      &NeuralAdaptiveController::OdometryCallback, this);
+        odometry_sub_ = nh_.subscribe("/payload/odometry", 1, &NeuralAdaptiveController::OdometryCallback, this);
 
         motor_velocity_reference_pub1_ = nh_.advertise<mav_msgs::Actuators>(
             "/pelican1/neural_adaptive_controller/command/motor_speed", 1);
@@ -164,6 +162,12 @@ namespace neural_adaptive_controller
         sigma_pitch_.clear();
         error_roll_.clear();
         error_pitch_.clear();
+
+        std::string filename = "data.csv";
+
+        ofs_.open("/root/catkin_ws/src/nn_adaptive_controller/src/controller_network/data.csv");
+
+        std::cout << "writing " << filename << "..." << std::endl;
     }
 
     void NeuralAdaptiveController::CommandPoseCallback(
@@ -249,6 +253,8 @@ namespace neural_adaptive_controller
 
     void NeuralAdaptiveController::OdometryCallback(const nav_msgs::OdometryConstPtr &odometry_msg)
     {
+        dt_ = (ros::Time::now() - dt_timer_).toSec();
+        dt_timer_ = ros::Time::now();
 
         ROS_INFO_ONCE("NeuralAdaptiveController got first odometry message.");
 
@@ -310,6 +316,9 @@ namespace neural_adaptive_controller
 
         Eigen::Vector3d angle_des;
         ComputeDesiredAngle(acceleration, &angle_des);
+
+        ofs_ << angle_des(0) << ", " << angle_des(1) << ", "
+             << odometry_.angular_velocity(0) << ", " << odometry_.angular_velocity(1) << std::endl;
 
         Eigen::Vector3d angle_in = angle_des - angle_sig_filtered;
 
@@ -399,10 +408,9 @@ namespace neural_adaptive_controller
 
     void NeuralAdaptiveController::adaptation(const Eigen::Vector3d &angular_rate_error, Eigen::Vector3d *angle_sig)
     {
-        double dt = 0.1;
-        double gamma = 10.0;
+        double gamma = 100.0;
 
-        last_angle_error_ += angular_rate_error * dt;
+        last_angle_error_ += angular_rate_error * dt_;
         last_angle_error_ = last_angle_error_.cwiseMax(-1.0 * kDefaultSigmaAbs);
         last_angle_error_ = last_angle_error_.cwiseMin(kDefaultSigmaAbs);
 
@@ -411,8 +419,8 @@ namespace neural_adaptive_controller
 
     Eigen::Vector3d NeuralAdaptiveController::lowPassFilter(const Eigen::Vector3d &raw)
     {
-        double k = 0.1;
-        Eigen::Vector3d LPF = (1 - k) * last_LPF_ + k * raw;
+        double c = 0.1;
+        Eigen::Vector3d LPF = (1 - c * dt_) * last_LPF_ + c * dt_ * raw;
         last_LPF_ = LPF;
 
         return LPF;
@@ -444,4 +452,3 @@ namespace neural_adaptive_controller
     }
 
 } // namespace neural_adaptive_controller
-// } // namespace rotors_control
